@@ -1,38 +1,118 @@
 export interface User {
   id: string;
-  username: string;
   email: string;
-  password: string;
-  isAdmin: boolean;
-  createdAt: string;
+  name: string;
+  avatar?: string;
+  role: 'student' | 'instructor' | 'admin';
+  enrolledCourses: string[];
+  completedLessons: string[];
+  badges: Badge[];
+  xp: number;
+  level: number;
+  createdAt: Date;
 }
 
 export interface Course {
   id: string;
   title: string;
   description: string;
-  thumbnailUrl: string;
-  category: 'cybersecurity' | 'computing' | 'frontend';
-  createdAt: string;
-  isActive: boolean;
+  thumbnail: string;
+  instructor: string;
+  instructorAvatar?: string;
+  duration: string;
+  level: 'Beginner' | 'Intermediate' | 'Advanced';
+  category: string;
+  price: number;
+  isPremium: boolean;
+  rating: number;
+  reviewCount: number;
+  enrolled_count: number; // Changed from enrolledCount to match database
+  lessons: Lesson[];
+  skills: string[];
+  createdAt: Date;
+  updatedAt: Date;
+  status: 'draft' | 'published' | 'archived';
 }
 
-export interface Video {
+export interface Lesson {
   id: string;
-  courseId: string;
   title: string;
   description: string;
-  youtubeId: string;
-  duration: number;
+  videoUrl?: string;
+  duration: string;
   order: number;
-  isActive: boolean;
+  isCompleted: boolean;
+  quiz?: Quiz;
+  resources: Resource[];
 }
 
-export interface UserProgress {
+export interface Quiz {
+  id: string;
+  questions: Question[];
+  passingScore: number;
+}
+
+export interface Question {
+  id: string;
+  question: string;
+  options: string[];
+  correctAnswer: number;
+  explanation?: string;
+}
+
+export interface Resource {
+  id: string;
+  title: string;
+  type: 'pdf' | 'link' | 'download';
+  url: string;
+}
+
+export interface Badge {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  color: string;
+  requirement: string;
+  earnedAt?: Date;
+}
+
+export interface Progress {
+  courseId: string;
+  userId: string;
+  completedLessons: string[];
+  currentLesson: string;
+  progressPercentage: number;
+  xpEarned: number;
+  timeSpent: number;
+  lastAccessed: Date;
+}
+
+export interface Review {
   id: string;
   userId: string;
-  videoId: string;
-  completed: boolean;
-  watchedSeconds: number;
-  lastWatched: string;
+  courseId: string;
+  userName: string;
+  userAvatar?: string;
+  rating: number;
+  comment: string;
+  createdAt: Date;
+}
+
+export interface Notification {
+  id: string;
+  userId: string;
+  title: string;
+  message: string;
+  type: 'info' | 'success' | 'warning' | 'error';
+  read: boolean;
+  createdAt: Date;
+}
+
+export interface Certificate {
+  id: string;
+  userId: string;
+  courseId: string;
+  issuedAt: Date;
+  certificateUrl: string;
 }

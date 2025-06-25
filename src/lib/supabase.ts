@@ -7,6 +7,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables');
 }
 
+// Frontend client with only public access
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // Types for our database
@@ -52,27 +53,4 @@ export interface Lesson {
   duration: string;
   order_index: number;
   created_at: string;
-}
-
-export interface Enrollment {
-  id: string;
-  user_id: string;
-  course_id: string;
-  payment_status: 'pending' | 'approved' | 'rejected' | 'cancelled';
-  payment_id?: string;
-  amount_paid?: number;
-  enrolled_at: string;
-  access_granted: boolean;
-}
-
-export interface Payment {
-  id: string;
-  user_id: string;
-  course_id: string;
-  mercadopago_payment_id?: string;
-  status: 'pending' | 'approved' | 'rejected' | 'cancelled' | 'refunded';
-  amount: number;
-  currency: string;
-  created_at: string;
-  updated_at: string;
 }

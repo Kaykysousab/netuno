@@ -1,8 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { supabase } from '../lib/supabase';
-import { SupabaseService } from '../services/supabaseService';
-import { StorageManager } from '../utils/storage';
-import type { Profile } from '../lib/supabase';
+import { apiService } from '../services/api';
 import type { User } from '../types';
 
 interface AuthContextType {
@@ -31,70 +28,35 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
-// Helper function to convert Profile to User
-const profileToUser = (profile: Profile): User => {
-  const userProgress = StorageManager.getUserProgress(profile.id);
-  
-  return {
-    id: profile.id,
-    email: profile.email,
-    name: profile.name,
-    avatar: profile.avatar_url,
-    role: profile.role as 'student' | 'instructor' | 'admin',
-    enrolledCourses: userProgress.enrolledCourses || [],
-    completedLessons: userProgress.completedLessons || [],
-    badges: userProgress.badges || [],
-    xp: profile.xp || 0,
-    level: profile.level || 1,
-    createdAt: new Date(profile.created_at || Date.now()),
-  };
-};
-
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Get initial session
-    const getInitialSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (session?.user) {
-        const profile = await SupabaseService.getCurrentUser();
-        if (profile) {
-          const fullUser = profileToUser(profile);
-          setUser(fullUser);
+    const initAuth = async () => {
+      const token = localStorage.getItem('auth_token');
+      if (token) {
+        try {
+          const response = await apiService.getCurrentUser();
+          setUser(response.user);
+        } catch (error) {
+          console.error('Auth initialization error:', error);
+          localStorage.removeItem('auth_token');
         }
       }
-      
       setLoading(false);
     };
 
-    getInitialSession();
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (session?.user) {
-          const profile = await SupabaseService.getCurrentUser();
-          if (profile) {
-            const fullUser = profileToUser(profile);
-            setUser(fullUser);
-          }
-        } else {
-          setUser(null);
-        }
-        setLoading(false);
-      }
-    );
-
-    return () => subscription.unsubscribe();
+    initAuth();
   }, []);
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
       setLoading(true);
-      await SupabaseService.signIn(email, password);
+      const response = await apiService.login(email, password);
+      
+      localStorage.setItem('auth_token', response.token);
+      setUser(response.user);
       return true;
     } catch (error: any) {
       console.error('Login error:', error);
@@ -108,52 +70,33 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       setLoading(true);
       
-      // Validate password length before attempting registration
       if (password.length < 6) {
         throw new Error('Password should be at least 6 characters long.');
       }
       
-      await SupabaseService.signUp(email, password, name);
+      const response = await apiService.register(email, password, name);
+      
+      localStorage.setItem('auth_token', response.token);
+      setUser(response.user);
       return true;
     } catch (error: any) {
       console.error('Register error:', error);
-      
-      // Re-throw the error so it can be handled by the component
-      if (error.message.includes('Password should be at least 6 characters') || 
-          error.message.includes('weak_password')) {
-        throw new Error('Password should be at least 6 characters long.');
-      }
-      
       throw error;
     } finally {
       setLoading(false);
     }
   };
 
-  const logout = async () => {
-    try {
-      await SupabaseService.signOut();
-      setUser(null);
-      StorageManager.clearCurrentUser();
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
+  const logout = () => {
+    localStorage.removeItem('auth_token');
+    setUser(null);
   };
 
   const enrollInCourse = async (courseId: string) => {
     if (!user) throw new Error('User not authenticated');
     
     try {
-      await SupabaseService.enrollInCourse(user.id, courseId);
-      
-      // Update local storage
-      const userProgress = StorageManager.getUserProgress(user.id);
-      if (!userProgress.enrolledCourses.includes(courseId)) {
-        userProgress.enrolledCourses.push(courseId);
-        StorageManager.saveUserProgress(user.id, userProgress);
-      }
-      
-      // Refresh user data
+      await apiService.enrollInCourse(courseId);
       await refreshUser();
     } catch (error) {
       console.error('Enrollment error:', error);
@@ -165,30 +108,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (!user) return;
 
     try {
-      await SupabaseService.updateLessonProgress(user.id, lessonId, completed);
-      
-      // Update local storage
-      const userProgress = StorageManager.getUserProgress(user.id);
-      if (completed && !userProgress.completedLessons.includes(lessonId)) {
-        userProgress.completedLessons.push(lessonId);
-        
-        // Update XP
-        const newXP = user.xp + 10;
-        const newLevel = Math.floor(newXP / 100) + 1;
-        
-        userProgress.xp = newXP;
-        userProgress.level = Math.max(user.level, newLevel);
-        
-        StorageManager.saveUserProgress(user.id, userProgress);
-        
-        // Update Supabase profile
-        await SupabaseService.updateProfile(user.id, {
-          xp: newXP,
-          level: Math.max(user.level, newLevel),
-        });
-        
-        await refreshUser();
-      }
+      await apiService.updateProgress(lessonId, completed);
+      await refreshUser();
     } catch (error) {
       console.error('Progress update error:', error);
     }
@@ -198,7 +119,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (!user) return false;
     
     try {
-      return await SupabaseService.hasAccessToCourse(user.id, courseId);
+      const response = await apiService.checkCourseAccess(courseId);
+      return response.hasAccess;
     } catch (error) {
       console.error('Access check error:', error);
       return false;
@@ -209,11 +131,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (!user) return;
     
     try {
-      const updatedProfile = await SupabaseService.getCurrentUser();
-      if (updatedProfile) {
-        const fullUser = profileToUser(updatedProfile);
-        setUser(fullUser);
-      }
+      const response = await apiService.getCurrentUser();
+      setUser(response.user);
     } catch (error) {
       console.error('User refresh error:', error);
     }

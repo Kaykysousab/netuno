@@ -103,6 +103,29 @@ class ApiService {
       method: 'DELETE'
     });
   }
+
+  // Payment methods
+  async getStripeConfig() {
+    return this.request('/payments/config');
+  }
+
+  async createPaymentIntent(courseId: string) {
+    return this.request('/payments/create-intent', {
+      method: 'POST',
+      body: JSON.stringify({ courseId })
+    });
+  }
+
+  async confirmPayment(paymentIntentId: string) {
+    return this.request('/payments/confirm', {
+      method: 'POST',
+      body: JSON.stringify({ paymentIntentId })
+    });
+  }
+
+  async getUserPayments() {
+    return this.request('/payments');
+  }
 }
 
 export const apiService = new ApiService();

@@ -2,15 +2,20 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, CreditCard, Lock, Shield, CheckCircle } from 'lucide-react';
 import { Button } from '../common/Button';
-import { MercadoPagoService } from '../../services/mercadoPagoService';
-import { SupabaseService } from '../../services/supabaseService';
+import { StripeService } from '../../services/stripeService';
+import { apiService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
-import type { Course } from '../../lib/supabase';
 
 interface PaymentModalProps {
   isOpen: boolean;
   onClose: () => void;
-  course: Course;
+  course: {
+    id: string;
+    title: string;
+    price: number;
+    instructor: string;
+    thumbnail: string;
+  };
   onPaymentSuccess: () => void;
 }
 
@@ -22,7 +27,6 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
 }) => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const handlePayment = async () => {
@@ -32,55 +36,29 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
     setError(null);
 
     try {
-      // Create payment record in Supabase
-      const payment = await SupabaseService.createPayment({
-        user_id: user.id,
-        course_id: course.id,
-        amount: course.price,
-        currency: 'BRL',
-        status: 'pending',
-      });
-
-      // Create Mercado Pago preference
-      const preference = await MercadoPagoService.createPayment({
-        title: course.title,
-        price: course.price,
-        courseId: course.id,
-        userId: user.id,
-      });
-
-      // Create enrollment with pending payment
-      await SupabaseService.enrollInCourse(user.id, course.id, {
-        amount: course.price,
-        paymentId: preference.id,
-      });
-
-      // Redirect to Mercado Pago checkout
-      window.open(preference.init_point, '_blank');
-      
-      // Show success message and close modal
-      onPaymentSuccess();
-      onClose();
-
-    } catch (err) {
+      if (course.price === 0) {
+        // Free course - enroll directly
+        await apiService.enrollInCourse(course.id);
+        onPaymentSuccess();
+        onClose();
+      } else {
+        // For demo purposes, we'll simulate a successful payment
+        // In a real app, you would integrate with Stripe Elements
+        const paymentIntent = await StripeService.createPaymentIntent(course.id);
+        
+        // Simulate payment confirmation
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        // In a real implementation, you would use Stripe Elements here
+        // For now, we'll just confirm the payment
+        await StripeService.confirmPayment(paymentIntent.paymentIntentId);
+        
+        onPaymentSuccess();
+        onClose();
+      }
+    } catch (err: any) {
       console.error('Payment error:', err);
-      setError('Erro ao processar pagamento. Tente novamente.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleFreeEnrollment = async () => {
-    if (!user) return;
-
-    setLoading(true);
-    try {
-      await SupabaseService.enrollInCourse(user.id, course.id);
-      onPaymentSuccess();
-      onClose();
-    } catch (err) {
-      console.error('Enrollment error:', err);
-      setError('Erro ao inscrever no curso. Tente novamente.');
+      setError(err.message || 'Erro ao processar pagamento. Tente novamente.');
     } finally {
       setLoading(false);
     }
@@ -134,7 +112,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                 <div className="flex justify-between items-center">
                   <span className="text-gray-300">Preço:</span>
                   <span className="text-2xl font-bold text-white">
-                    {course.price === 0 ? 'Gratuito' : `R$ ${course.price.toFixed(2)}`}
+                    {course.price === 0 ? 'Gratuito' : `$${course.price.toFixed(2)}`}
                   </span>
                 </div>
               </div>
@@ -144,7 +122,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
             <div className="mb-6 space-y-3">
               <div className="flex items-center space-x-2 text-sm text-gray-400">
                 <Shield size={16} className="text-green-400" />
-                <span>Pagamento seguro via Mercado Pago</span>
+                <span>Pagamento seguro via Stripe</span>
               </div>
               <div className="flex items-center space-x-2 text-sm text-gray-400">
                 <Lock size={16} className="text-green-400" />
@@ -168,26 +146,18 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
 
             {/* Action Button */}
             <div className="space-y-4">
-              {course.price === 0 ? (
-                <Button
-                  className="w-full"
-                  onClick={handleFreeEnrollment}
-                  loading={loading}
-                  disabled={loading}
-                >
-                  Inscrever-se Gratuitamente
-                </Button>
-              ) : (
-                <Button
-                  className="w-full"
-                  onClick={handlePayment}
-                  loading={loading}
-                  disabled={loading}
-                  icon={CreditCard}
-                >
-                  Pagar R$ {course.price.toFixed(2)}
-                </Button>
-              )}
+              <Button
+                className="w-full"
+                onClick={handlePayment}
+                loading={loading}
+                disabled={loading}
+                icon={course.price === 0 ? undefined : CreditCard}
+              >
+                {course.price === 0 
+                  ? 'Inscrever-se Gratuitamente' 
+                  : `Pagar $${course.price.toFixed(2)}`
+                }
+              </Button>
 
               <Button
                 variant="outline"
@@ -207,15 +177,18 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                 </p>
                 <div className="flex justify-center space-x-2">
                   <div className="bg-cosmic-800 rounded px-2 py-1 text-xs text-gray-300">
-                    Cartão
+                    Visa
                   </div>
                   <div className="bg-cosmic-800 rounded px-2 py-1 text-xs text-gray-300">
-                    PIX
+                    Mastercard
                   </div>
                   <div className="bg-cosmic-800 rounded px-2 py-1 text-xs text-gray-300">
-                    Boleto
+                    American Express
                   </div>
                 </div>
+                <p className="text-xs text-gray-500 text-center mt-2">
+                  Demo: O pagamento será simulado para fins de demonstração
+                </p>
               </div>
             )}
           </motion.div>

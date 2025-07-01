@@ -10,10 +10,11 @@
     "preview": "vite preview",
     "backend": "cd backend && npm run dev",
     "start:backend": "cd backend && npm start",
-    "install:backend": "cd backend && npm install"
+    "install:backend": "cd backend && npm install",
+    "init:backend": "cd backend && npm run init-db"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.39.0",
+    "@stripe/stripe-js": "^2.4.0",
     "framer-motion": "^10.16.16",
     "lucide-react": "^0.344.0",
     "react": "^18.3.1",

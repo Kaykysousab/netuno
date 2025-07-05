@@ -30,9 +30,19 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     e.preventDefault();
     setError('');
 
-    // Client-side password validation
+    // Client-side validation
+    if (!formData.email || !formData.password) {
+      setError('Por favor, preencha todos os campos obrigatórios.');
+      return;
+    }
+
     if (formData.password.length < 6) {
-      setError('Password should be at least 6 characters long.');
+      setError('A senha deve ter pelo menos 6 caracteres.');
+      return;
+    }
+
+    if (mode === 'register' && !formData.name) {
+      setError('Por favor, informe seu nome.');
       return;
     }
 
@@ -41,7 +51,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       if (mode === 'login') {
         success = await login(formData.email, formData.password);
         if (!success) {
-          setError('Invalid credentials. Try admin@cosmic.com / admin123 or user@cosmic.com / user123');
+          setError('Credenciais inválidas. Tente admin@cosmic.com / admin123 ou user@cosmic.com / user123');
         }
       } else {
         success = await register(formData.email, formData.password, formData.name);
@@ -50,20 +60,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       if (success) {
         onClose();
         setFormData({ email: '', password: '', name: '' });
+        setError('');
       }
     } catch (err: any) {
       console.error('Auth error:', err);
-      
-      // Handle specific error messages
-      if (err.message.includes('Password should be at least 6 characters')) {
-        setError('Password should be at least 6 characters long.');
-      } else if (err.message.includes('weak_password')) {
-        setError('Password should be at least 6 characters long.');
-      } else if (err.message.includes('User already registered')) {
-        setError('An account with this email already exists. Please try logging in instead.');
-      } else {
-        setError('An error occurred. Please try again.');
-      }
+      setError(err.message || 'Ocorreu um erro. Tente novamente.');
     }
   };
 
@@ -79,6 +80,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     }
   };
 
+  const handleClose = () => {
+    if (!loading) {
+      onClose();
+      setError('');
+      setFormData({ email: '', password: '', name: '' });
+    }
+  };
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -87,7 +96,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50"
-          onClick={onClose}
+          onClick={handleClose}
         >
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
@@ -99,11 +108,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             {/* Header */}
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold text-white">
-                {mode === 'login' ? 'Welcome Back' : 'Create Account'}
+                {mode === 'login' ? 'Entrar' : 'Criar Conta'}
               </h2>
               <button
-                onClick={onClose}
+                onClick={handleClose}
                 className="text-gray-400 hover:text-white transition-colors"
+                disabled={loading}
               >
                 <X size={24} />
               </button>
@@ -114,7 +124,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               {mode === 'register' && (
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Full Name
+                    Nome Completo *
                   </label>
                   <div className="relative">
                     <User size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
@@ -124,8 +134,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       value={formData.name}
                       onChange={handleInputChange}
                       className="w-full bg-cosmic-800 border border-cosmic-700 rounded-lg pl-10 pr-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                      placeholder="Enter your full name"
+                      placeholder="Digite seu nome completo"
                       required
+                      disabled={loading}
                     />
                   </div>
                 </div>
@@ -133,7 +144,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Email Address
+                  Email *
                 </label>
                 <div className="relative">
                   <Mail size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
@@ -143,15 +154,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     value={formData.email}
                     onChange={handleInputChange}
                     className="w-full bg-cosmic-800 border border-cosmic-700 rounded-lg pl-10 pr-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    placeholder="Enter your email"
+                    placeholder="Digite seu email"
                     required
+                    disabled={loading}
                   />
                 </div>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Password
+                  Senha *
                 </label>
                 <div className="relative">
                   <Lock size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
@@ -161,19 +173,21 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     value={formData.password}
                     onChange={handleInputChange}
                     className="w-full bg-cosmic-800 border border-cosmic-700 rounded-lg pl-10 pr-12 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    placeholder="Enter your password (min. 6 characters)"
+                    placeholder="Digite sua senha (mín. 6 caracteres)"
                     required
                     minLength={6}
+                    disabled={loading}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white"
+                    disabled={loading}
                   >
                     {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                   </button>
                 </div>
-                <p className="text-xs text-gray-400 mt-1">Password must be at least 6 characters long</p>
+                <p className="text-xs text-gray-400 mt-1">A senha deve ter pelo menos 6 caracteres</p>
               </div>
 
               {error && (
@@ -192,30 +206,32 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 loading={loading}
                 disabled={loading}
               >
-                {mode === 'login' ? 'Sign In' : 'Create Account'}
+                {mode === 'login' ? 'Entrar' : 'Criar Conta'}
               </Button>
             </form>
 
             {/* Demo Credentials */}
             <div className="mt-4 p-3 bg-cosmic-800/50 rounded-lg border border-cosmic-700">
-              <p className="text-xs text-gray-400 mb-2">Demo Credentials:</p>
+              <p className="text-xs text-gray-400 mb-2">Credenciais de Demonstração:</p>
               <p className="text-xs text-gray-300">Admin: admin@cosmic.com / admin123</p>
-              <p className="text-xs text-gray-300">Student: user@cosmic.com / user123</p>
+              <p className="text-xs text-gray-300">Estudante: user@cosmic.com / user123</p>
             </div>
 
             {/* Switch Mode */}
             <div className="mt-6 text-center">
               <p className="text-gray-400 text-sm">
-                {mode === 'login' ? "Don't have an account?" : 'Already have an account?'}
+                {mode === 'login' ? "Não tem uma conta?" : 'Já tem uma conta?'}
                 <button
                   type="button"
                   onClick={() => {
                     setMode(mode === 'login' ? 'register' : 'login');
                     setError('');
+                    setFormData({ email: '', password: '', name: '' });
                   }}
                   className="ml-2 text-purple-400 hover:text-purple-300 font-medium"
+                  disabled={loading}
                 >
-                  {mode === 'login' ? 'Sign Up' : 'Sign In'}
+                  {mode === 'login' ? 'Cadastre-se' : 'Entrar'}
                 </button>
               </p>
             </div>

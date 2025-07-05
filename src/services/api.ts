@@ -1,6 +1,4 @@
-// API service for backend communication
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
-
+// Mock API service for frontend-only implementation
 class ApiService {
   private getAuthHeaders() {
     const token = localStorage.getItem('auth_token');
@@ -10,121 +8,114 @@ class ApiService {
     };
   }
 
-  private async request(endpoint: string, options: RequestInit = {}) {
-    const url = `${API_BASE_URL}${endpoint}`;
-    
-    const response = await fetch(url, {
-      ...options,
-      headers: {
-        ...this.getAuthHeaders(),
-        ...options.headers
-      }
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Request failed');
-    }
-
-    return response.json();
-  }
-
-  // Auth methods
+  // Mock API responses
   async register(email: string, password: string, name: string) {
-    return this.request('/auth/register', {
-      method: 'POST',
-      body: JSON.stringify({ email, password, name })
-    });
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    return {
+      token: `mock-token-${Date.now()}`,
+      user: {
+        id: `user-${Date.now()}`,
+        email,
+        name,
+        role: 'student',
+        xp: 0,
+        level: 1
+      }
+    };
   }
 
   async login(email: string, password: string) {
-    return this.request('/auth/login', {
-      method: 'POST',
-      body: JSON.stringify({ email, password })
-    });
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Mock authentication
+    if (email === 'admin@cosmic.com' && password === 'admin123') {
+      return {
+        token: 'mock-admin-token',
+        user: {
+          id: 'admin-1',
+          email: 'admin@cosmic.com',
+          name: 'Admin User',
+          role: 'admin',
+          xp: 0,
+          level: 1
+        }
+      };
+    }
+    
+    if (email === 'user@cosmic.com' && password === 'user123') {
+      return {
+        token: 'mock-student-token',
+        user: {
+          id: 'student-1',
+          email: 'user@cosmic.com',
+          name: 'Student User',
+          role: 'student',
+          xp: 150,
+          level: 2
+        }
+      };
+    }
+    
+    throw new Error('Invalid credentials');
   }
 
   async getCurrentUser() {
-    return this.request('/auth/me');
+    const userData = localStorage.getItem('user_data');
+    if (userData) {
+      return { user: JSON.parse(userData) };
+    }
+    throw new Error('No user found');
   }
 
   // Course methods
   async getCourses() {
-    return this.request('/courses');
+    return { courses: [] };
   }
 
   async getCourse(id: string) {
-    return this.request(`/courses/${id}`);
+    return { course: null };
   }
 
   async enrollInCourse(courseId: string) {
-    return this.request(`/courses/${courseId}/enroll`, {
-      method: 'POST'
-    });
+    return { enrollment: { id: Date.now(), courseId, userId: 'current-user' } };
   }
 
   async checkCourseAccess(courseId: string) {
-    return this.request(`/courses/${courseId}/access`);
+    return { hasAccess: true };
   }
 
   // User methods
   async updateProgress(lessonId: string, completed: boolean) {
-    return this.request('/users/progress', {
-      method: 'POST',
-      body: JSON.stringify({ lessonId, completed })
-    });
+    return { progress: { lessonId, completed } };
   }
 
   async getUserEnrollments() {
-    return this.request('/users/enrollments');
-  }
-
-  // Admin methods
-  async getAllUsers() {
-    return this.request('/users');
-  }
-
-  async createCourse(courseData: any) {
-    return this.request('/courses', {
-      method: 'POST',
-      body: JSON.stringify(courseData)
-    });
-  }
-
-  async updateCourse(courseId: string, courseData: any) {
-    return this.request(`/courses/${courseId}`, {
-      method: 'PUT',
-      body: JSON.stringify(courseData)
-    });
-  }
-
-  async deleteCourse(courseId: string) {
-    return this.request(`/courses/${courseId}`, {
-      method: 'DELETE'
-    });
+    return { enrollments: [] };
   }
 
   // Payment methods
   async getStripeConfig() {
-    return this.request('/payments/config');
+    return {
+      publishableKey: 'pk_test_demo_key'
+    };
   }
 
   async createPaymentIntent(courseId: string) {
-    return this.request('/payments/create-intent', {
-      method: 'POST',
-      body: JSON.stringify({ courseId })
-    });
+    return {
+      clientSecret: `pi_demo_${Date.now()}_secret`,
+      paymentIntentId: `pi_demo_${Date.now()}`
+    };
   }
 
   async confirmPayment(paymentIntentId: string) {
-    return this.request('/payments/confirm', {
-      method: 'POST',
-      body: JSON.stringify({ paymentIntentId })
-    });
+    return { success: true };
   }
 
   async getUserPayments() {
-    return this.request('/payments');
+    return { payments: [] };
   }
 }
 

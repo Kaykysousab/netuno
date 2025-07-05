@@ -17,11 +17,10 @@ import { ProgressBar } from '../gamification/ProgressBar';
 import { PaymentModal } from '../payment/PaymentModal';
 import { LockedCourseOverlay } from './LockedCourseOverlay';
 import { useAuth } from '../../context/AuthContext';
-import { SupabaseService } from '../../services/supabaseService';
-import type { Course as SupaCourse, Lesson } from '../../lib/supabase';
+import { Course, Lesson } from '../../types';
 
 interface CourseDetailProps {
-  course: SupaCourse;
+  course: Course;
   onBack: () => void;
   onStartCourse: () => void;
 }
@@ -35,25 +34,22 @@ export const CourseDetail: React.FC<CourseDetailProps> = ({
   const [activeTab, setActiveTab] = useState<'overview' | 'curriculum' | 'reviews'>('overview');
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [hasAccess, setHasAccess] = useState(false);
-  const [lessons, setLessons] = useState<Lesson[]>([]);
   const [loading, setLoading] = useState(true);
   const [userProgress, setUserProgress] = useState<any[]>([]);
 
   useEffect(() => {
     const loadCourseData = async () => {
       try {
-        // Load lessons
-        const courseLessons = await SupabaseService.getCourseLessons(course.id);
-        setLessons(courseLessons || []);
-
         // Check access if user is logged in
         if (user) {
           const access = await hasAccessToCourse(course.id);
           setHasAccess(access);
 
           if (access) {
-            const progress = await SupabaseService.getUserProgress(user.id);
-            setUserProgress(progress || []);
+            // Mock progress data
+            setUserProgress([
+              { lesson_id: course.lessons[0]?.id, completed: true }
+            ]);
           }
         }
       } catch (error) {
@@ -67,9 +63,9 @@ export const CourseDetail: React.FC<CourseDetailProps> = ({
   }, [course.id, user, hasAccessToCourse]);
 
   const completedLessons = userProgress.filter(p => 
-    lessons.some(lesson => lesson.id === p.lesson_id) && p.completed
+    course.lessons.some(lesson => lesson.id === p.lesson_id) && p.completed
   );
-  const progress = lessons.length > 0 ? (completedLessons.length / lessons.length) * 100 : 0;
+  const progress = course.lessons.length > 0 ? (completedLessons.length / course.lessons.length) * 100 : 0;
 
   const handleEnroll = () => {
     if (!user) {
@@ -89,7 +85,7 @@ export const CourseDetail: React.FC<CourseDetailProps> = ({
   const handlePaymentSuccess = async () => {
     try {
       if (user) {
-        await SupabaseService.enrollInCourse(user.id, course.id);
+        // Mock enrollment success
         setHasAccess(true);
       }
     } catch (error) {
@@ -164,13 +160,13 @@ export const CourseDetail: React.FC<CourseDetailProps> = ({
             >
               <div className="relative rounded-xl overflow-hidden mb-6">
                 <img
-                  src={course.thumbnail || 'https://images.pexels.com/photos/1181676/pexels-photo-1181676.jpeg?auto=compress&cs=tinysrgb&w=800'}
+                  src={course.thumbnail}
                   alt={course.title}
                   className="w-full h-64 object-cover"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                 
-                {course.is_premium && (
+                {course.isPremium && (
                   <div className="absolute top-4 right-4">
                     <div className="bg-yellow-500 text-black px-3 py-1 rounded-full text-sm font-bold flex items-center space-x-1">
                       <Crown size={16} />
@@ -232,7 +228,7 @@ export const CourseDetail: React.FC<CourseDetailProps> = ({
                     <BookOpen size={16} />
                     <span className="text-sm">Aulas</span>
                   </div>
-                  <div className="text-white font-semibold">{lessons.length}</div>
+                  <div className="text-white font-semibold">{course.lessons.length}</div>
                 </div>
               </div>
 
@@ -250,7 +246,7 @@ export const CourseDetail: React.FC<CourseDetailProps> = ({
                   </div>
                   <ProgressBar
                     current={completedLessons.length}
-                    total={lessons.length}
+                    total={course.lessons.length}
                     showPercentage={false}
                   />
                 </motion.div>
@@ -311,7 +307,7 @@ export const CourseDetail: React.FC<CourseDetailProps> = ({
                     <h3 className="text-xl font-bold text-white mb-4">Instrutor</h3>
                     <div className="flex items-center space-x-4">
                       <img
-                        src={course.instructor_avatar || 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=100'}
+                        src={course.instructorAvatar || 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=100'}
                         alt={course.instructor}
                         className="w-16 h-16 rounded-full"
                       />
@@ -337,7 +333,7 @@ export const CourseDetail: React.FC<CourseDetailProps> = ({
                   )}
                   
                   <div className="space-y-3">
-                    {lessons.map((lesson, index) => {
+                    {course.lessons.map((lesson, index) => {
                       const isCompleted = userProgress.some(p => p.lesson_id === lesson.id && p.completed);
                       
                       return (
@@ -390,7 +386,7 @@ export const CourseDetail: React.FC<CourseDetailProps> = ({
                             />
                           ))}
                         </div>
-                        <p className="text-gray-400">{course.review_count} avaliações</p>
+                        <p className="text-gray-400">{course.reviewCount} avaliações</p>
                       </div>
                     </div>
                   </div>

@@ -16,10 +16,10 @@ import { QuizComponent } from './QuizComponent';
 import { Button } from '../common/Button';
 import { ProgressBar } from '../gamification/ProgressBar';
 import { useAuth } from '../../context/AuthContext';
-import type { Course as SupaCourse, Lesson } from '../../lib/supabase';
+import { Course, Lesson } from '../../types';
 
 interface CoursePlayerProps {
-  course: SupaCourse;
+  course: Course;
   onBack: () => void;
   onProgress: (lessonId: string, completed: boolean) => void;
 }
@@ -33,39 +33,10 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
   const [currentLessonIndex, setCurrentLessonIndex] = useState(0);
   const [showQuiz, setShowQuiz] = useState(false);
   const [completedLessons, setCompletedLessons] = useState<string[]>([]);
-  const [lessons, setLessons] = useState<Lesson[]>([]);
 
-  // Mock lessons for now - in real app, these would come from Supabase
-  useEffect(() => {
-    // Mock lessons data
-    const mockLessons: Lesson[] = [
-      {
-        id: '1',
-        course_id: course.id,
-        title: 'Introdução ao Curso',
-        description: 'Visão geral do que você vai aprender',
-        video_url: 'https://www.youtube.com/watch?v=Tn6-PIqc4UM',
-        duration: '15 min',
-        order_index: 0,
-        created_at: new Date().toISOString()
-      },
-      {
-        id: '2',
-        course_id: course.id,
-        title: 'Conceitos Fundamentais',
-        description: 'Entendendo os conceitos básicos',
-        video_url: 'https://www.youtube.com/watch?v=SqcY0GlETPk',
-        duration: '20 min',
-        order_index: 1,
-        created_at: new Date().toISOString()
-      }
-    ];
-    setLessons(mockLessons);
-  }, [course.id]);
-
-  const currentLesson = lessons[currentLessonIndex];
-  const isLastLesson = currentLessonIndex === lessons.length - 1;
-  const progress = lessons.length > 0 ? (completedLessons.length / lessons.length) * 100 : 0;
+  const currentLesson = course.lessons[currentLessonIndex];
+  const isLastLesson = currentLessonIndex === course.lessons.length - 1;
+  const progress = course.lessons.length > 0 ? (completedLessons.length / course.lessons.length) * 100 : 0;
 
   const handleVideoComplete = () => {
     if (currentLesson && !completedLessons.includes(currentLesson.id)) {
@@ -88,14 +59,14 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
 
   const handleLessonSelect = (index: number) => {
     // Check if lesson is unlocked
-    if (index === 0 || completedLessons.includes(lessons[index - 1].id)) {
+    if (index === 0 || completedLessons.includes(course.lessons[index - 1].id)) {
       setCurrentLessonIndex(index);
       setShowQuiz(false);
     }
   };
 
   const isLessonUnlocked = (index: number) => {
-    return index === 0 || completedLessons.includes(lessons[index - 1].id);
+    return index === 0 || completedLessons.includes(course.lessons[index - 1].id);
   };
 
   const isLessonCompleted = (lessonId: string) => {
@@ -155,7 +126,7 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
               transition={{ delay: 0.2 }}
             >
               <VideoPlayer
-                videoUrl={currentLesson.video_url || 'https://www.youtube.com/watch?v=Tn6-PIqc4UM'}
+                videoUrl={currentLesson.videoUrl || 'https://www.youtube.com/watch?v=Tn6-PIqc4UM'}
                 title={currentLesson.title}
                 onProgress={(progress) => {
                   // Track video progress
@@ -186,7 +157,7 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
                     </div>
                     <div className="flex items-center space-x-1">
                       <BookOpen size={16} />
-                      <span>Aula {currentLessonIndex + 1} de {lessons.length}</span>
+                      <span>Aula {currentLessonIndex + 1} de {course.lessons.length}</span>
                     </div>
                   </div>
                 </div>
@@ -243,7 +214,7 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
               </h3>
               <ProgressBar
                 current={completedLessons.length}
-                total={lessons.length}
+                total={course.lessons.length}
                 label="Aulas Concluídas"
                 color="purple"
               />
@@ -274,7 +245,7 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
                 Conteúdo do Curso
               </h3>
               <div className="space-y-2">
-                {lessons.map((lesson, index) => {
+                {course.lessons.map((lesson, index) => {
                   const isUnlocked = isLessonUnlocked(index);
                   const isCompleted = isLessonCompleted(lesson.id);
                   const isCurrent = index === currentLessonIndex;

@@ -12,6 +12,7 @@ interface AuthContextType {
   updateUserProgress: (lessonId: string, completed: boolean) => Promise<void>;
   hasAccessToCourse: (courseId: string) => Promise<boolean>;
   refreshUser: () => Promise<void>;
+  getAllUsers: () => User[];
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -138,6 +139,36 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  const getAllUsers = (): User[] => {
+    // Mock implementation for admin dashboard
+    return [
+      {
+        id: '1',
+        email: 'admin@cosmic.com',
+        name: 'Admin User',
+        role: 'admin',
+        enrolledCourses: [],
+        completedLessons: [],
+        badges: [],
+        xp: 0,
+        level: 1,
+        createdAt: new Date()
+      },
+      {
+        id: '2',
+        email: 'user@cosmic.com',
+        name: 'Student User',
+        role: 'student',
+        enrolledCourses: ['1'],
+        completedLessons: ['1-1'],
+        badges: [],
+        xp: 150,
+        level: 2,
+        createdAt: new Date()
+      }
+    ];
+  };
+
   return (
     <AuthContext.Provider value={{ 
       user, 
@@ -148,7 +179,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       enrollInCourse,
       updateUserProgress,
       hasAccessToCourse,
-      refreshUser
+      refreshUser,
+      getAllUsers
     }}>
       {children}
     </AuthContext.Provider>

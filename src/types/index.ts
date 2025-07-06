@@ -10,6 +10,8 @@ export interface User {
   xp: number;
   level: number;
   createdAt: Date;
+  passwordHash?: string; // Added for secure password storage
+  purchasedCourses?: string[]; // Track purchased courses separately
 }
 
 export interface Course {
@@ -26,7 +28,7 @@ export interface Course {
   isPremium: boolean;
   rating: number;
   reviewCount: number;
-  enrolled_count: number; // Changed from enrolledCount to match database
+  enrolled_count: number;
   lessons: Lesson[];
   skills: string[];
   createdAt: Date;
@@ -115,4 +117,14 @@ export interface Certificate {
   courseId: string;
   issuedAt: Date;
   certificateUrl: string;
+}
+
+export interface Purchase {
+  id: string;
+  userId: string;
+  courseId: string;
+  stripePaymentIntentId: string;
+  amount: number;
+  status: 'pending' | 'completed' | 'failed' | 'refunded';
+  createdAt: Date;
 }

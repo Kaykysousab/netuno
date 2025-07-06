@@ -10,7 +10,8 @@ import {
   CheckCircle,
   ArrowLeft,
   Crown,
-  Lock
+  Lock,
+  ShoppingCart
 } from 'lucide-react';
 import { Button } from '../common/Button';
 import { ProgressBar } from '../gamification/ProgressBar';
@@ -30,7 +31,7 @@ export const CourseDetail: React.FC<CourseDetailProps> = ({
   onBack,
   onStartCourse
 }) => {
-  const { user, hasAccessToCourse } = useAuth();
+  const { user, hasAccessToCourse, enrollInCourse } = useAuth();
   const [activeTab, setActiveTab] = useState<'overview' | 'curriculum' | 'reviews'>('overview');
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [hasAccess, setHasAccess] = useState(false);
@@ -40,7 +41,6 @@ export const CourseDetail: React.FC<CourseDetailProps> = ({
   useEffect(() => {
     const loadCourseData = async () => {
       try {
-        // Check access if user is logged in
         if (user) {
           const access = await hasAccessToCourse(course.id);
           setHasAccess(access);
@@ -85,8 +85,16 @@ export const CourseDetail: React.FC<CourseDetailProps> = ({
   const handlePaymentSuccess = async () => {
     try {
       if (user) {
-        // Mock enrollment success
+        if (course.price === 0) {
+          // Free course enrollment
+          await enrollInCourse(course.id);
+        }
+        // For paid courses, the purchase is handled in PaymentModal
         setHasAccess(true);
+        
+        // Refresh the page data
+        const access = await hasAccessToCourse(course.id);
+        setHasAccess(access);
       }
     } catch (error) {
       console.error('Enrollment error:', error);
@@ -125,6 +133,9 @@ export const CourseDetail: React.FC<CourseDetailProps> = ({
       </div>
     );
   }
+
+  const isEnrolled = user?.enrolledCourses.includes(course.id) || false;
+  const isPurchased = user?.purchasedCourses?.includes(course.id) || false;
 
   return (
     <div className="min-h-screen bg-cosmic-950 py-8">
@@ -180,6 +191,15 @@ export const CourseDetail: React.FC<CourseDetailProps> = ({
                     <div className="bg-red-500 text-white px-3 py-1 rounded-full text-sm font-bold flex items-center space-x-1">
                       <Lock size={16} />
                       <span>Bloqueado</span>
+                    </div>
+                  </div>
+                )}
+
+                {isPurchased && (
+                  <div className="absolute top-4 left-4">
+                    <div className="bg-green-500 text-white px-3 py-1 rounded-full text-sm font-bold flex items-center space-x-1">
+                      <CheckCircle size={16} />
+                      <span>Comprado</span>
                     </div>
                   </div>
                 )}
@@ -473,12 +493,21 @@ export const CourseDetail: React.FC<CourseDetailProps> = ({
                   )}
                 </div>
               ) : (
-                <Button
-                  className="w-full"
-                  onClick={handleEnroll}
-                >
-                  {course.price === 0 ? 'Inscrever-se Gratuitamente' : 'Comprar Curso'}
-                </Button>
+                <div className="space-y-4">
+                  <Button
+                    className="w-full"
+                    onClick={handleEnroll}
+                    icon={course.price === 0 ? undefined : ShoppingCart}
+                  >
+                    {course.price === 0 ? 'Inscrever-se Gratuitamente' : 'Comprar Curso'}
+                  </Button>
+                  
+                  {course.price > 0 && (
+                    <p className="text-xs text-gray-400 text-center">
+                      💳 Pagamento seguro via Stripe
+                    </p>
+                  )}
+                </div>
               )}
 
               <div className="mt-6 space-y-3 text-sm text-gray-400">

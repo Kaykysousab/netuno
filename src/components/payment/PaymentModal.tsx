@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, CreditCard, Lock, Shield, CheckCircle } from 'lucide-react';
+import { X, CreditCard, Lock, Shield, CheckCircle, AlertCircle } from 'lucide-react';
 import { Button } from '../common/Button';
 import { StripeService } from '../../services/stripeService';
 import { useAuth } from '../../context/AuthContext';
@@ -24,10 +24,10 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
   course,
   onPaymentSuccess
 }) => {
-  const { user } = useAuth();
+  const { user, purchaseCourse } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [paymentStep, setPaymentStep] = useState<'form' | 'processing' | 'success'>('form');
+  const [paymentStep, setPaymentStep] = useState<'form' | 'processing' | 'success' | 'error'>('form');
 
   const handlePayment = async () => {
     if (!user) return;
@@ -38,8 +38,9 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
 
     try {
       if (course.price === 0) {
-        // Free course - enroll directly
+        // Curso gratuito - inscrever diretamente
         await new Promise(resolve => setTimeout(resolve, 1000));
+        await purchaseCourse(course.id);
         setPaymentStep('success');
         setTimeout(() => {
           onPaymentSuccess();
@@ -47,24 +48,46 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
           setPaymentStep('form');
         }, 2000);
       } else {
-        // Paid course - process payment
-        await StripeService.processPayment({
+        // Curso pago - processar pagamento via Stripe
+        console.log('Processando pagamento via Stripe para:', course.title);
+        
+        const paymentResult = await StripeService.processPayment({
           id: course.id,
           title: course.title,
           price: course.price
         });
         
-        setPaymentStep('success');
-        setTimeout(() => {
-          onPaymentSuccess();
-          onClose();
-          setPaymentStep('form');
-        }, 2000);
+        if (paymentResult.status === 'succeeded') {
+          // Registrar compra no sistema
+          await purchaseCourse(course.id);
+          
+          // Salvar registro de compra
+          const purchases = JSON.parse(localStorage.getItem('cosmic_purchases') || '[]');
+          purchases.push({
+            id: Date.now().toString(),
+            userId: user.id,
+            courseId: course.id,
+            stripePaymentIntentId: paymentResult.id,
+            amount: course.price,
+            status: 'completed',
+            createdAt: new Date().toISOString()
+          });
+          localStorage.setItem('cosmic_purchases', JSON.stringify(purchases));
+          
+          setPaymentStep('success');
+          setTimeout(() => {
+            onPaymentSuccess();
+            onClose();
+            setPaymentStep('form');
+          }, 2000);
+        } else {
+          throw new Error('Pagamento não foi processado com sucesso');
+        }
       }
     } catch (err: any) {
       console.error('Payment error:', err);
       setError(err.message || 'Erro ao processar pagamento. Tente novamente.');
-      setPaymentStep('form');
+      setPaymentStep('error');
     } finally {
       setLoading(false);
     }
@@ -76,6 +99,11 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
       setPaymentStep('form');
       setError(null);
     }
+  };
+
+  const handleRetry = () => {
+    setPaymentStep('form');
+    setError(null);
   };
 
   return (
@@ -186,10 +214,10 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                   </Button>
                 </div>
 
-                {/* Demo Notice */}
+                {/* Stripe Info */}
                 <div className="mt-6 pt-6 border-t border-cosmic-700">
                   <p className="text-xs text-gray-500 text-center">
-                    🎭 Demo: O pagamento será simulado para fins de demonstração
+                    🔒 Pagamentos processados com segurança pelo Stripe
                   </p>
                 </div>
               </>
@@ -202,7 +230,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                   Processando Pagamento...
                 </h3>
                 <p className="text-gray-400">
-                  Por favor, aguarde enquanto processamos seu pagamento.
+                  Por favor, aguarde enquanto processamos seu pagamento via Stripe.
                 </p>
               </div>
             )}
@@ -222,6 +250,32 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                 <p className="text-gray-400">
                   Você agora tem acesso ao curso. Redirecionando...
                 </p>
+              </div>
+            )}
+
+            {paymentStep === 'error' && (
+              <div className="text-center py-8">
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  className="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center mx-auto mb-4"
+                >
+                  <AlertCircle size={32} className="text-white" />
+                </motion.div>
+                <h3 className="text-xl font-bold text-white mb-2">
+                  Erro no Pagamento
+                </h3>
+                <p className="text-gray-400 mb-6">
+                  {error || 'Ocorreu um erro ao processar o pagamento.'}
+                </p>
+                <div className="space-y-3">
+                  <Button onClick={handleRetry} className="w-full">
+                    Tentar Novamente
+                  </Button>
+                  <Button variant="outline" onClick={handleClose} className="w-full">
+                    Fechar
+                  </Button>
+                </div>
               </div>
             )}
           </motion.div>

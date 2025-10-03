@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { 
-  BookOpen, 
-  Trophy, 
-  Clock, 
+import {
+  BookOpen,
+  Trophy,
+  Clock,
   TrendingUp,
   Star,
   Play,
@@ -11,7 +11,8 @@ import {
   Target,
   Award,
   Zap,
-  Gift
+  Gift,
+  CheckCircle
 } from 'lucide-react';
 import { Button } from '../common/Button';
 import { ProgressBar } from '../gamification/ProgressBar';

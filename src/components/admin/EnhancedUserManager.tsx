@@ -1,18 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import {
-  Users,
-  Search,
-  Trash2,
-  Edit,
-  Mail,
-  Calendar,
-  Award,
-  BookOpen,
-  TrendingUp,
-  UserPlus,
-  X
-} from 'lucide-react';
+import { Users, Search, Trash2, CreditCard as Edit, Mail, Calendar, Award, BookOpen, TrendingUp, UserPlus, X } from 'lucide-react';
 import { Button } from '../common/Button';
 import { adminService } from '../../services/adminService';
 import { LoadingSpinner } from '../common/LoadingSpinner';

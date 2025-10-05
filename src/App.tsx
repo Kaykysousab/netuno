@@ -7,7 +7,8 @@ import { Footer } from './components/layout/Footer';
 import { Hero } from './components/home/Hero';
 import { FeaturedCourses } from './components/home/FeaturedCourses';
 import { Testimonials } from './components/home/Testimonials';
-import { AdminDashboard } from './components/dashboard/AdminDashboard';
+import { SuperAdminDashboard } from './components/dashboard/SuperAdminDashboard';
+import { TeacherDashboard } from './components/dashboard/TeacherDashboard';
 import { EnhancedStudentDashboard } from './components/dashboard/EnhancedStudentDashboard';
 import { CourseSearch } from './components/course/CourseSearch';
 import { CourseDetail } from './components/course/CourseDetail';
@@ -112,7 +113,9 @@ const AppContent: React.FC = () => {
         ) : null;
       
       case 'dashboard':
-        return user?.role === 'admin' ? <AdminDashboard /> : <EnhancedStudentDashboard />;
+        if (user?.role === 'super_admin') return <SuperAdminDashboard />;
+        if (user?.role === 'teacher') return <TeacherDashboard />;
+        return <EnhancedStudentDashboard />;
       
       default:
         return <HomePage onNavigate={handleNavigate} />;
@@ -128,8 +131,10 @@ const AppContent: React.FC = () => {
       
       <AnimatePresence mode="wait">
         {user && currentView === 'dashboard' ? (
-          user.role === 'admin' ? (
-            <AdminDashboard />
+          user.role === 'super_admin' ? (
+            <SuperAdminDashboard />
+          ) : user.role === 'teacher' ? (
+            <TeacherDashboard />
           ) : (
             <EnhancedStudentDashboard />
           )

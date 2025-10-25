@@ -12,8 +12,8 @@ import {
   Upload
 } from 'lucide-react';
 import { Button } from '../common/Button';
-import { CourseManager } from '../admin/CourseManager';
-import { UserManager } from '../admin/UserManager';
+import { EnhancedCourseManager } from '../admin/EnhancedCourseManager';
+import { EnhancedUserManager } from '../admin/EnhancedUserManager';
 import { useAuth } from '../../context/AuthContext';
 import { StorageManager } from '../../utils/storage';
 import { Course, User } from '../../types';
@@ -219,17 +219,11 @@ export const AdminDashboard: React.FC = () => {
           )}
 
           {activeTab === 'courses' && (
-            <CourseManager
-              courses={courses}
-              onUpdateCourses={handleUpdateCourses}
-            />
+            <EnhancedCourseManager />
           )}
 
           {activeTab === 'users' && (
-            <UserManager
-              users={users}
-              onUpdateUsers={handleUpdateUsers}
-            />
+            <EnhancedUserManager />
           )}
 
           {activeTab === 'settings' && (

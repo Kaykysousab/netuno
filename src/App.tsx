@@ -8,7 +8,7 @@ import { Hero } from './components/home/Hero';
 import { FeaturedCourses } from './components/home/FeaturedCourses';
 import { Testimonials } from './components/home/Testimonials';
 import { AdminDashboard } from './components/dashboard/AdminDashboard';
-import { EnhancedStudentDashboard } from './components/dashboard/EnhancedStudentDashboard';
+import { StudentDashboard } from './components/dashboard/StudentDashboard';
 import { CourseSearch } from './components/course/CourseSearch';
 import { CourseDetail } from './components/course/CourseDetail';
 import { CoursePlayer } from './components/course/CoursePlayer';
@@ -112,7 +112,7 @@ const AppContent: React.FC = () => {
         ) : null;
       
       case 'dashboard':
-        return user?.role === 'admin' ? <AdminDashboard /> : <EnhancedStudentDashboard />;
+        return user?.role === 'admin' ? <AdminDashboard /> : <StudentDashboard />;
       
       default:
         return <HomePage onNavigate={handleNavigate} />;
@@ -131,7 +131,7 @@ const AppContent: React.FC = () => {
           user.role === 'admin' ? (
             <AdminDashboard />
           ) : (
-            <EnhancedStudentDashboard />
+            <StudentDashboard />
           )
         ) : (
           renderCurrentView()
